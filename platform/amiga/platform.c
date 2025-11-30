@@ -132,7 +132,6 @@ status_t unmask_interrupt(unsigned int irq) {
     cia_base = (void *)CIA_A_BASE;
     cia_icr = CIA_A_ICR;
     bit = (irq - (NUM_IRQS_PAULA + 1));
-    // cia_a_irqs_enabled |= (bit & 0x1F);
     cia_a_irqs_enabled |= (1 << bit);
   } else if (is_cia_b_irq(irq)) {
     cia_base = (void *)CIA_B_BASE;
@@ -224,9 +223,7 @@ enum handler_return m68k_platform_irq(uint8_t m68k_irq) {
 
   while (combined) {
     int irq_bit = ctz(combined);
-    int foo = combined;
     combined &= ~(1 << irq_bit); // Clear IRQ bit
-    int human = (irq_bit + 1);
 
     // TODO: clear INTREQ here
 
