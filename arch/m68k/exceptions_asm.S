@@ -14,6 +14,10 @@
 // so it's easy to just vector most of the handlers into one of a few classes of handlers
 // and decode the vector in C.
 
+.global real_ill
+real_ill:
+    jmp _m68k_general_exception
+
 .align 4
 _m68k_irq_vector:
     // TODO: save less state for IRQs
@@ -41,6 +45,8 @@ _m68k_irq_vector:
 
 exception_vector _m68k_general_exception m68k_exception
 exception_vector _m68k_trap_exception m68k_trap_exception
+
+.extern isp_unimp
 
 .section .text.vectab
 .align 16
@@ -71,7 +77,13 @@ DATA(exc_vectors)
     .endr
 .org (48 * 4)
     // start of FPU, MMU vectors
-    .rept (64 - 48)
+    .rept (61 - 48)
+    .long _m68k_general_exception
+    .endr
+.org (61 * 4)
+    .long _060_isp_unimp
+.org (62 * 4)
+    .rept (64 - 62)
     .long _m68k_general_exception
     .endr
 .org (64 * 4) // offset 0x100
