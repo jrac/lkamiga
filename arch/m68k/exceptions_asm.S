@@ -14,9 +14,8 @@
 // so it's easy to just vector most of the handlers into one of a few classes of handlers
 // and decode the vector in C.
 
-.global real_ill
-real_ill:
-    jmp _m68k_general_exception
+.weak _060_isp_unimp
+_060_isp_unimp:
 
 .align 4
 _m68k_irq_vector:

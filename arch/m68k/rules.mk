@@ -34,6 +34,7 @@ else ifeq ($(M68K_CPU),68040)
 ARCH_COMPILEFLAGS := -mcpu=68040
 else ifeq ($(M68K_CPU),68060)
 ARCH_COMPILEFLAGS := -mcpu=68060
+MODULE_DEPS += arch/m68k/68060SP
 else
 $(error add support for selected cpu $(M68K_CPU))
 endif
