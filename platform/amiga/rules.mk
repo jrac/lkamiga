@@ -25,7 +25,6 @@ MODULE_DEPS += \
 MODULE_SRCS += $(LOCAL_DIR)/serial.c
 MODULE_SRCS += $(LOCAL_DIR)/platform.c
 MODULE_SRCS += $(LOCAL_DIR)/timer.c
-# TODO: Move 68060SP code to external/arch
 MODULE_SRCS += $(LOCAL_DIR)/stage1.S
 MODULE_SRCS += $(LOCAL_DIR)/stage2.S
 

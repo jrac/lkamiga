@@ -225,11 +225,6 @@ enum handler_return m68k_platform_irq(uint8_t m68k_irq) {
     int irq_bit = ctz(combined);
     combined &= ~(1 << irq_bit); // Clear IRQ bit
 
-    // TODO: clear INTREQ here
-    if (irq_bit < NUM_IRQS_PAULA) {
-       write_reg(INTREQ, (1 << irq_bit));
-    }
-
     if (handlers[irq_bit].handler) {
       // TODO: Convert irq bit to human-readable IRQ name (enum)
       ret = handlers[irq_bit].handler(handlers[irq_bit].arg);

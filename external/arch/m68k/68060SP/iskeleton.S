@@ -66,6 +66,8 @@
 | To simply continue execution at the next instruction, just
 | do an "rte".
 |
+| littlekernel changes: Remove user space exception check
+|
 
 	.global		_060_isp_done
 _060_isp_done:
@@ -80,14 +82,11 @@ _060_isp_done:
 | a CHK exception stack frame from the Unimplemented Integer Instrcution
 | stack frame and branches to this routine.
 |
-| littlekernel changes: Call m68k_trap_exception
+| littlekernel changes: Call m68k_trap_exception, remove tracing check
 |
 
 	.global		_060_real_chk
 _060_real_chk:
-	tst.b		(%sp)			| is tracing enabled?
-	bpls		real_chk_end		| no
-
 |
 |	    CHK FRAME		   TRACE FRAME
 |	*****************	*****************
@@ -101,8 +100,6 @@ _060_real_chk:
 |	*      SR	*	*      SR	*
 |	*****************	*****************
 |
-	move.b		#0x24,0x7(%sp)		| set trace vecno
-	bral		_060_real_trace
 
 real_chk_end:
    bral     m68k_trap_exception
@@ -121,13 +118,13 @@ real_chk_end:
 | then it create a Trace exception stack frame from the "chk" exception
 | stack frame and branches to the _real_trace() entry point.
 |
-| littlekernel changes: bpls -> bplw in _060_real_divbyzero
+| littlekernel changes: 
+|  - bpls -> bplw in _060_real_divbyzero
+|  - Remove tracing check
+|
 
 	.global		_060_real_divbyzero
 _060_real_divbyzero:
-	tst.b		(%sp)			| is tracing enabled?
-	bplw		real_divbyzero_end	| no
-
 |
 |	 DIVBYZERO FRAME	   TRACE FRAME
 |	*****************	*****************
@@ -140,9 +137,6 @@ _060_real_divbyzero:
 |	*****************	*****************
 |	*      SR	*	*      SR	*
 |	*****************	*****************
-|
-|	move.b		#0x24,0x7(%sp)		| set trace vecno
-|	bral		_060_real_trace
 |
 | littlekernel changes: Call m68k_trap_exception
 |
