@@ -77,7 +77,10 @@ $(ADF_IMAGE): $(KERNEL_IMAGE) $(BOOTLOADER)
 	xdftool $@ create
 	xdftool $@ format lk ffs
 	xdftool $@ boot write $(BOOTLOADER)
-	dd if=$(KERNEL_IMAGE) of=$@ bs=512 seek=2 conv=notrunc; \
+	@KSIZE=$$(stat -c %s "$(KERNEL_IMAGE)"); \
+	echo -n "$$KSIZE"; \
+	printf '%08x' "$$KSIZE" | xxd -r -p | dd of=$@ bs=1024 seek=1 conv=notrunc; \
+	dd if=$(KERNEL_IMAGE) of=$@ bs=512 seek=4 conv=notrunc; \
 
 EXTRA_BUILDDEPS += $(ADF_IMAGE)
 GENERATED += $(ADF_IMAGE) $(BOOTLOADER) $(STAGE1_RAW) $(STAGE2_RAW) $(STAGE1_ELF) $(STAGE2_ELF)

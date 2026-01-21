@@ -1,9 +1,8 @@
-#include "platform_p.h"
-
 #include <kernel/debug.h>
 #include <kernel/thread.h>
 #include <lib/console.h>
 #include <lib/heap.h>
+#include <lk/main.h>
 #include <lk/bits.h>
 #include <lk/err.h>
 #include <lk/init.h>
@@ -17,6 +16,8 @@
 #else
 #include <kernel/novm.h>
 #endif
+
+#include "platform_p.h"
 
 static volatile uint16_t *const paula_base = (void *)0xDFF000;
 

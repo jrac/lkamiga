@@ -4,6 +4,10 @@ kaddr_ptr:
    .dc.l 0
 ioreq_ptr:
    .dc.l 0
+hdr_ptr:
+   .dc.l 0
+ksize:
+   .dc.l 0
 
 /* AllocMem stuff */
 .equ    MEMF_ANY,       0x00000000
@@ -35,8 +39,6 @@ ioreq_ptr:
 
 lea STACK_TOP,%sp
 
-|.equ RELOC, 0x3e800
-
 move.w  #0x041E,0x00DFF180    /* Flash a colour on screen for debugging */
 
 lea     loader(%pc),%a5
@@ -57,44 +59,63 @@ loader:
    move.l #(MEMF_CLEAR + MEMF_REVERSE),%d1 /* AllocMem attribute mask: MEMF_CLEAR | MEMF_CHIP */
    jsr -198(%a6) /* AllocMem() */
    tst.l %d0
-   beq.s alloc_failure
+   beq alloc_failure
 
    move.l #STACK_SIZE,%d0
    move.l #STACK_BASE,%a1
    jsr -204(%a6) | AllocAbs()
    tst.l %d0
-   beq.s alloc_failure
+   beq alloc_failure
 
-   /* Reserve kernel relocation region */
-   /*
-   move.l #512000,%d0
-   move.l #RELOC,%a1
-   jsr -204(%a6) | AllocAbs()
+   /* Reserve memory and load header */
+   move.l #1024,%d0
+   move.l #(MEMF_CLEAR + MEMF_PUBLIC),%d1
+   jsr -198(%a6) /* AllocMem() */
    tst.l %d0
-   beq.s alloc_failure
-   */
+   beq alloc_failure
+   lea hdr_ptr,%a5
+   move.l %d0,(%a5)
+   move.l %d0,%a3
+
+   /* Restore IOReq ptr */
+   lea ioreq_ptr,%a1
+   move.l (%a1),%a1
+
+   /* Retrieve kernel image size from header in ADF */
+   move.l  #(2*512),io_Length(%a1)
+   move.l  %a3,io_Data(%a1) /* Read header from floppy in to memory provided by AllocMem */
+   move.l  #0x400,io_Offset(%a1)
+   move.w  #CMD_READ,io_Command(%a1)
+   jsr     -456(%a6) /* DoIO() */
+   lea ksize(%pc),%a4
+   move.l (%a3),(%a4)
+
+   /* Determine how much trackdisk should read, based on kernel size. Round to next 512 */
+   move.l (%a4),%d1
+   move.l %d1,%d2
+   add.l #511,%d2
+   and.l #0xFFFFFE00,%d2
 
    /* Allocate memory for kernel image */
-   move.l #200000,%d0
-   |move.l #(MEMF_CLEAR + MEMF_REVERSE),%d1 /* AllocMem attribute mask: MEMF_CLEAR | MEMF_CHIP */
+   move.l %d2,%d0
    move.l #(MEMF_CLEAR),%d1 /* AllocMem attribute mask: MEMF_CLEAR | MEMF_CHIP */
    jsr -198(%a6) /* AllocMem() */
    tst.l %d0
-   beq.s alloc_failure
+   beq alloc_failure
    lea kaddr_ptr,%a0
    move.l %d0,(%a0)
    move.l %d0,%a2
 
+   /* Restore IOReq pointer before next DoIO call */
    lea ioreq_ptr,%a1
    move.l (%a1),%a1
 
    /* Load kernel from floppy in to RAM */
-   move.l  #(349*512),io_Length(%a1)   /* TODO: Write kernel size somewhere during build, read that value */
+   move.l  %d2,io_Length(%a1)   /* TODO: Write kernel size somewhere during build, read that value */
    move.l  %a2,io_Data(%a1) /* Read kernel from floppy in to memory provided by AllocMem */
-   move.l  #0x400,io_Offset(%a1)        
+   move.l  #0x800,io_Offset(%a1)
    move.w  #CMD_READ,io_Command(%a1)
    jsr     -456(%a6) /* DoIO() */
-
    move.w  #9,io_Command(%a1)          /* td_motor */
    clr.l   io_Length(%a1)              /* Turn off FDD motor */
    jsr     -456(%a6)
@@ -113,5 +134,4 @@ alloc_failure:
    move.w  #0xFF00,0x00DFF180    /* Flash a colour on screen for debugging */
    moveq #0xfffffff0,%d0
    rts
-
 
