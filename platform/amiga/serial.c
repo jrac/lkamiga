@@ -3,11 +3,17 @@
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
-#include <lib/cbuf.h>
 #include <platform.h>
 #include <platform/interrupts.h>
+#include <lib/cbuf.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+#if CONSOLE_HAS_INPUT_BUFFER
+#warning "CONSOLE_HAS_INPUT_BUFFER is ON in serial.c"
+#else
+#warning "CONSOLE_HAS_INPUT_BUFFER is OFF in serial.c"
+#endif
 
 #define TBE_STATUS (1 << 13)
 #define RBF_STATUS (1 << 14)
@@ -55,7 +61,14 @@ static enum handler_return uart_irq_rx_handler(void *arg) {
 
   if ((reg & RBF_STATUS) > 0) {
     char c = reg & 0xFF;
-    cbuf_write_char(&rx_buf, c, false);
+
+#if CONSOLE_HAS_INPUT_BUFFER
+        cbuf_t *target_buf = &console_input_cbuf;
+#else
+        cbuf_t *target_buf = &rx_buf;
+#endif
+
+    cbuf_write_char(target_buf, c, false);
     resched = true;
   }
 
