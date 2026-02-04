@@ -9,6 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
+#include <lib/cbuf.h>
 
 // CIA-A registers
 #define CIA_A_BASE 0xBFE000
@@ -58,5 +59,6 @@
 
 void cia_timer_init(void);
 void platform_serial_init(void);
+void platform_keyboard_init(cbuf_t *buffer);
 
 status_t clear_interrupt(unsigned int bit);

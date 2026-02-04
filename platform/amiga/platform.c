@@ -263,3 +263,7 @@ void platform_early_init(void) {
   cia_timer_init();
   novm_add_arena("mem", MEMBASE, MEMSIZE);
 }
+
+void platform_init(void) {
+   platform_keyboard_init(&console_input_cbuf);
+}
