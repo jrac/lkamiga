@@ -6,25 +6,19 @@
  * https://opensource.org/licenses/MIT
  */
 
+#include "platform_p.h"
 #include <lib/cbuf.h>
+#include <lib/console.h>
 #include <platform.h>
 #include <platform/interrupts.h>
-#include "platform_p.h"
-
-static volatile uint8_t *const cia_base = (volatile uint8_t *)CIA_A_BASE;
-
-static inline void delay(lk_time_t delay) {
-    lk_time_t start = current_time();
-
-    while (start + delay > current_time());
-}
 
 #define SCANCODE_LSHIFT 0x60
 #define SCANCODE_RSHIFT 0x61
 
-/* scancode translation tables */
+static volatile uint8_t *const cia_base = (volatile uint8_t *)CIA_A_BASE;
 
-// Amiga raw keycode -> ASCII (US keycaps). Unassigned entries are 0.
+// clang-format off
+// Amiga raw keycode -> ASCII (US layout). Unassigned entries are 0.
 static const int KeyCodeSingleLower[128] = {
     [0x00] = '`', [0x01] = '1', [0x02] = '2', [0x03] = '3', [0x04] = '4', [0x05] = '5',
     [0x06] = '6', [0x07] = '7', [0x08] = '8', [0x09] = '9', [0x0a] = '0', [0x0b] = '-', 
@@ -34,19 +28,17 @@ static const int KeyCodeSingleLower[128] = {
     [0x16] = 'u', [0x17] = 'i', [0x18] = 'o', [0x19] = 'p', [0x1a] = '[', [0x1b] = ']',
     [0x44] = '\n', // Enter/Return
 
-    [0x62] = 
+    [0x62] = 0,
     [0x20] = 'a', [0x21] = 's', [0x22] = 'd', [0x23] = 'f', [0x24] = 'g', [0x25] = 'h', 
     [0x26] = 'j', [0x27] = 'k', [0x28] = 'l', [0x29] = ';', [0x2a] = '\'', [0x31] = 'z',
     [0x32] = 'x', [0x33] = 'c', [0x34] = 'v', [0x35] = 'b', [0x36] = 'n', [0x37] = 'm',
     [0x38] = ',', [0x39] = '.', [0x3a] = '/',
-    [0x40] = ' ', // Space bar
-   
-    [0x46] = 'DEL', [0x5f] = 'HELP',
+    [0x40] = ' ', [0x45] = 0x1b, // Space & Esc
 
     // Keypad
     [0x0f] = '0', [0x1d] = '1', [0x1e] = '2', [0x1f] = '3', [0x2d] = '4', [0x2e] = '5',
     [0x2f] = '6', [0x3d] = '7', [0x3e] = '8', [0x3f] = '9', [0x3c] = '.', [0x4a] = '-',
-    [0x5a] = '(', [0x5b] = ')', [0x5c] = '/', [0x5d] = '*', [0x5e] = '+', [0x43] = '\n',
+    [0x5a] = '(', [0x5b] = ')', [0x5c] = '/', [0x5e] = '+', [0x43] = '\n',
 
     [0x2b] = 0,          // (international key on some layouts)
     [0x30] = 0,          // (international key on some layouts)
@@ -68,6 +60,7 @@ static const int KeyCodeSingleUpper[128] = {
     [0x31] = 'Z', [0x32] = 'X', [0x33] = 'C', [0x34] = 'V', [0x35] = 'B', [0x36] = 'N',
     [0x37] = 'M', [0x38] = '<', [0x39] = '>', [0x3a] = '?', [0x3b] = 0, [0x3c] = ' ',
 };
+// clang-format on
 
 static bool key_lshift;
 static bool key_rshift;
@@ -75,88 +68,89 @@ static bool key_rshift;
 static cbuf_t *key_buf;
 
 static inline uint8_t decode_key(uint8_t key) {
-   return ~((key >> 1) | (key << 7));
+    return ~((key >> 1) | (key << 7));
+}
+
+static bool generate_esc_seq(cbuf_t *buf, char a, char b, char c) {
+    char esc_seq[3] = {a, b, c};
+
+    if (cbuf_space_avail(buf) < sizeof(esc_seq)) {
+        return false;
+    }
+
+    return cbuf_write(buf, esc_seq, sizeof(esc_seq), false) == sizeof(esc_seq);
 }
 
 static bool cia_process_scode(uint8_t scode) {
-   bool resched = false;
-   bool keyUpBit;
-   int keyCode;
+    bool resched = false;
+    bool keyUpBit;
+    int keyCode;
 
-   /*
-   cia_base[CIA_A_CRA] |=  (1u << 6);
-   delay(85);
-   cia_base[CIA_A_CRA] &= ~(1u << 6);
-   */
+    keyUpBit = (scode & 0x80) != 0;
+    scode &= 0x7f;
 
-   //uint8_t raw = code & 0x7F;
-   keyUpBit = (scode & 0x80) != 0;
-   scode &= 0x7f;
-
-   if (scode == SCANCODE_LSHIFT) {
+    if (scode == SCANCODE_LSHIFT) {
         key_lshift = !keyUpBit;
     }
 
     if (scode == SCANCODE_RSHIFT) {
         key_rshift = !keyUpBit;
     }
-//dprintf(SPEW, "scode=%02x up=%d\n", scode & 0x7f, (scode & 0x80) != 0);
+
+    if (!keyUpBit) {
+        switch (scode) {
+            case 0x4f: // LEFT
+                resched = generate_esc_seq(key_buf, 0x1b, '[', 'D');
+                break;
+            case 0x4e: // RIGHT
+                resched = generate_esc_seq(key_buf, 0x1b, '[', 'C');
+                break;
+            case 0x4c: // UP
+                resched = generate_esc_seq(key_buf, 0x1b, '[', 'A');
+                break;
+            case 0x4d: // DOWN
+                resched = generate_esc_seq(key_buf, 0x1b, '[', 'B');
+                break;
+        }
+    }
+
     if (key_lshift || key_rshift) {
         keyCode = KeyCodeSingleUpper[scode];
-        //keyCode = multi ? KeyCodeMultiUpper[scode] : KeyCodeSingleUpper[scode];
     } else {
         keyCode = KeyCodeSingleLower[scode];
-        //keyCode = multi ? KeyCodeMultiLower[scode] : KeyCodeSingleLower[scode];
     }
 
-
-   //bool released = (code & 0x80) != 0;
-
-   /*
-   dprintf(SPEW, "kbd byte=%02x raw=%02x %s\n",
-                code, raw, released ? "up" : "down");
-                */
-
-   if (keyCode != -1 && !keyUpBit) {
-        char c = (char) keyCode;
-        resched = cbuf_write_char(key_buf, c, false);
+    if (keyCode != 0 && !keyUpBit) {
+        resched = cbuf_write_char(key_buf, keyCode, false);
     }
 
+    cia_base[CIA_A_CRA] |= (1 << 6);
+    cia_base[CIA_A_CRA] &= ~(1 << 6);
 
-   cia_base[CIA_A_CRA] |=  (1u << 6);
-   delay(85);
-   cia_base[CIA_A_CRA] &= ~(1u << 6);
-
-   return resched;
+    return resched;
 }
 
 static enum handler_return cia_kbd_interrupt(void *arg) {
-   bool resched = false;
-   uint8_t sdr = cia_base[CIA_A_SDR];
-   uint8_t scode = decode_key(sdr);
+    bool resched = false;
+    uint8_t sdr = cia_base[CIA_A_SDR];
+    uint8_t scode = decode_key(sdr);
 
-   resched = cia_process_scode(scode);
+    resched = cia_process_scode(scode);
 
-   return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
+    return resched ? INT_RESCHEDULE : INT_NO_RESCHEDULE;
 }
 
 int platform_read_key(char *c) {
-    ssize_t len;
-
-    len = cbuf_read_char(key_buf, c, true);
-    return len;
+    return cbuf_read_char(key_buf, c, true);
 }
 
-
 void platform_keyboard_init(cbuf_t *buffer) {
-   static volatile uint8_t *const cia_base = (volatile uint8_t *)CIA_A_BASE;
+    key_buf = buffer;
 
-   key_buf = buffer;
+    cia_base[CIA_A_CRA] &= ~(1 << 6);        // Set SPMODE to input
+    cia_base[CIA_A_ICR] = (1 << 7 | 1 << 3); // Set SP bit in ICR
 
-   cia_base[CIA_A_CRA] &= ~(1 << 6); // Set SPMODE to input
-   cia_base[CIA_A_ICR] = (1 << 7 | 1 << 3); // Set SP bit in ICR
-  
-   register_int_handler(18, cia_kbd_interrupt, NULL);
-   unmask_interrupt(4);
-   unmask_interrupt(18);
+    register_int_handler(18, cia_kbd_interrupt, NULL);
+    unmask_interrupt(4);
+    unmask_interrupt(18);
 }
