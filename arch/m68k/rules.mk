@@ -12,9 +12,13 @@ MODULE_SRCS += $(LOCAL_DIR)/thread.c
 
 GLOBAL_DEFINES += SMP_MAX_CPUS=1
 
-# set the default toolchain to microblaze elf and set a #define
+# set the default toolchain to m68k-elf
 ifndef TOOLCHAIN_PREFIX
+ifndef ARCH_m68k_TOOLCHAIN_PREFIX
 TOOLCHAIN_PREFIX := m68k-elf-
+else
+TOOLCHAIN_PREFIX := $(ARCH_m68k_TOOLCHAIN_PREFIX)
+endif
 endif
 
 # select the cpu based on flags the platform/target passes in
