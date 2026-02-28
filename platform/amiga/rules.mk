@@ -22,9 +22,10 @@ MODULE_DEPS += \
 		app/tests \
 
 # Your platform-specific source files
+MODULE_SRCS += $(LOCAL_DIR)/display.c
+MODULE_SRCS += $(LOCAL_DIR)/platform.c
 MODULE_SRCS += $(LOCAL_DIR)/serial.c
 MODULE_SRCS += $(LOCAL_DIR)/keyboard.c
-MODULE_SRCS += $(LOCAL_DIR)/platform.c
 MODULE_SRCS += $(LOCAL_DIR)/timer.c
 MODULE_SRCS += $(LOCAL_DIR)/stage1.S
 MODULE_SRCS += $(LOCAL_DIR)/stage2.S

@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Copyright (c) 2025-2026 Josh Cummings
  *
@@ -57,8 +58,35 @@
 #define CIA_B_CRA_LOAD (1 << 4)
 #define CIA_B_CRA_SERIAL (1 << 6)
 
+#define DMACON   0x096
+#define COP1LCH  0x080
+#define COP1LCL  0x082
+#define COPJMP1  0x088
+
+#define BPLCON0  0x100
+#define BPLCON1  0x102
+#define BPLCON2  0x104
+
+#define BPL1PTH  0x0E0
+#define BPL1PTL  0x0E2
+#define BPL1MOD  0x108
+#define BPL2MOD  0x10A
+
+#define DIWSTRT  0x08E
+#define DIWSTOP  0x090
+#define DDFSTRT  0x092
+#define DDFSTOP  0x094
+
+#define COLOR00  0x180
+#define COLOR01  0x182
+
 void cia_timer_init(void);
 void platform_serial_init(void);
 void platform_keyboard_init(cbuf_t *buffer);
+int platform_dgetc(char *c, bool wait);
+
+void uart_putc(char c);
+int uart_getc(char *c, bool wait);
+void dputc(char c);
 
 status_t clear_interrupt(unsigned int bit);

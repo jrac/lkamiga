@@ -17,12 +17,6 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#if CONSOLE_HAS_INPUT_BUFFER
-#warning "CONSOLE_HAS_INPUT_BUFFER is ON in serial.c"
-#else
-#warning "CONSOLE_HAS_INPUT_BUFFER is OFF in serial.c"
-#endif
-
 #define TBE_STATUS (1 << 13)
 #define RBF_STATUS (1 << 14)
 
@@ -193,8 +187,6 @@ void uart_putc(char c) {
 
 int uart_getc(char *c, bool wait) { return cbuf_read_char(&rx_buf, c, wait); }
 
-int platform_dgetc(char *c, bool wait) { return uart_getc(c, wait); }
-
 // TODO: Implement panic stuff properly
 int platform_pgetc(char *c, bool wait) {
   uint16_t reg = read_reg(SERDATR);
@@ -209,9 +201,3 @@ int platform_pgetc(char *c, bool wait) {
 
 void platform_pputc(char c) { uart_putc(c); }
 
-void platform_dputc(char c) {
-  if (c == '\n')
-    platform_dputc('\r');
-
-  uart_putc(c);
-}

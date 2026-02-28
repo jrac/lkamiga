@@ -6,6 +6,7 @@
  * https://opensource.org/licenses/MIT
  */
 
+#include <stdbool.h>
 #include <kernel/debug.h>
 #include <kernel/thread.h>
 #include <lib/console.h>
@@ -18,6 +19,7 @@
 #include <lk/trace.h>
 #include <platform.h>
 #include <platform/interrupts.h>
+#include <platform/display.h>
 #include <stdio.h>
 #if WITH_KERNEL_VM
 #include <kernel/vm.h>
@@ -134,7 +136,7 @@ status_t unmask_interrupt(unsigned int irq) {
   }
 
   volatile uint8_t *cia_base;
-  uint8_t cia_icr;
+  uint16_t cia_icr;
   uint8_t bit;
 
   if (is_cia_a_irq(irq)) {
@@ -259,11 +261,24 @@ void platform_early_init(void) {
   // Enable Paula 'EXTER' interrupts, needed for CIA-B timers
   unmask_interrupt(14);
 
+  novm_add_arena("mem", MEMBASE, MEMSIZE);
+  platform_init_display();
   platform_serial_init();
   cia_timer_init();
-  novm_add_arena("mem", MEMBASE, MEMSIZE);
+}
+
+void platform_dputc(char c) {
+  if (c == '\n')
+    platform_dputc('\r');
+
+  uart_putc(c); // TODO: is it possible to have multiple consoles?
+}
+
+int platform_dgetc(char *c, bool wait) { 
+   return cbuf_read_char(&console_input_cbuf, c, wait);
 }
 
 void platform_init(void) {
    platform_keyboard_init(&console_input_cbuf);
 }
+

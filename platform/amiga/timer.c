@@ -167,8 +167,7 @@ void cia_timer_init(void) {
 // each? Lots of similarities
 status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg,
                                     lk_time_t interval) {
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&lock, state);
+  arch_interrupt_saved_state_t state = spin_lock_irqsave(&lock);
 
   t_callback = callback;
   callback_arg = arg;
@@ -194,8 +193,7 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg,
 
 int platform_set_periodic_timer(platform_timer_callback callback, void *arg,
                                 lk_time_t interval) {
-  spin_lock_saved_state_t state;
-  spin_lock_irqsave(&lock, state);
+  arch_interrupt_saved_state_t state = spin_lock_irqsave(&lock);
 
   t_callback = callback;
   callback_arg = arg;
