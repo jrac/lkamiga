@@ -60,20 +60,6 @@ static void write_reg(unsigned int reg, uint32_t val) {
   paula_base[reg >> 1] = val;
 }
 
-void init_display(void) {
-   // Disable DMA
-   write_reg(DMACON, 0x7FFF);
-
-   // Set up copper list
-   uintptr_t clist = (uintptr_t)copper;
-   write_reg(COP1LCH, (clist >> 16));
-   write_reg(COP1LCL, (clist & 0xFFFF));
-   write_reg(COPJMP1, 0x0000);
-
-   // Enable DMA
-   write_reg(DMACON, (0x8000 | 0x0200 | 0x0080 | 0x0100));
-}
-
 status_t display_get_framebuffer(struct display_framebuffer *fb) {
    fb->image.pixels = bitplane;
 
@@ -101,7 +87,18 @@ void platform_init_display(void) {
    memset(bitplane, 0, BPL_BYTES);
    
    make_copper_list(bitplane);
-   init_display();
+
+   // Disable DMA
+   write_reg(DMACON, 0x7FFF);
+
+   // Set up copper list
+   uintptr_t clist = (uintptr_t)copper;
+   write_reg(COP1LCH, (clist >> 16));
+   write_reg(COP1LCL, (clist & 0xFFFF));
+   write_reg(COPJMP1, 0x0000);
+
+   // Enable DMA
+   write_reg(DMACON, (0x8000 | 0x0200 | 0x0080 | 0x0100));
 
    display_get_framebuffer(&display_fb);
 }

@@ -136,7 +136,7 @@ static inline uint16_t ms_to_ticks(lk_time_t ms) {
 }
 
 static enum handler_return cia_timer_irq(void *arg) {
-  uint8_t icr = cia_base[CIA_B_ICR];
+  cia_base[CIA_B_ICR]; // Clear ICR. TODO: Remove when clear_interrupt() has CIA support
 
   if (t_callback) {
     return t_callback(callback_arg, current_time());
