@@ -10,6 +10,7 @@
 #include <platform.h>
 
 static volatile uint8_t *const cia_base = (volatile uint8_t *)CIA_A_BASE;
+static volatile uint16_t *const paula_base = (void *)0xDFF000;
 
 static void amiga_reboot(void) {
     cia_base[CIA_A_DDRB >> 1] |= 0x80; // Set port direction
@@ -17,6 +18,12 @@ static void amiga_reboot(void) {
 }
 
 static void amiga_shutdown(void) {
+   // Might be able to get away with just the 'stop'
+   paula_base[0x9c >> 1] = 0x7fff; // INTREQ
+   paula_base[0x9a >> 1] = 0x7fff; // INTENA
+   paula_base[0x96 >> 1] = 0x7fff; // DMACON
+
+   __asm__ volatile("stop #0x2700");
 }
 
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) {
