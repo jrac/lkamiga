@@ -19,6 +19,7 @@ LK_HEAP_IMPLEMENTATION ?= dlmalloc
 MODULE_DEPS += \
 		lib/cbuf \
 		lib/console \
+		lib/gfxconsole \
 		app/tests \
 
 # Your platform-specific source files
