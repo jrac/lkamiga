@@ -31,7 +31,7 @@ void make_copper_list(uint8_t *bpl) {
 
     // Set display window
     copper[i++] = COP_MOVE(DIWSTRT); copper[i++] = 0x2C81; // DIWSTRT
-    copper[i++] = COP_MOVE(DIWSTOP); copper[i++] = 0xF4C1; // DIWSTOP
+    copper[i++] = COP_MOVE(DIWSTOP); copper[i++] = ((((0x2C + H) & 0xFF) << 8) | 0xC1); // DIWSTOP
     copper[i++] = COP_MOVE(DDFSTRT); copper[i++] = 0x0038; // DDFSTRT
     copper[i++] = COP_MOVE(DDFSTOP); copper[i++] = 0x00D0; // DDFSTOP
 
@@ -83,7 +83,7 @@ status_t display_get_info(struct display_info *info) {
 }
 
 void platform_init_display(void) {
-   bitplane = (uint8_t *)novm_alloc_pages(3, 'mem');
+   bitplane = (uint8_t *)novm_alloc_pages(3, 'mem'); // TODO: remove hardcoding
    memset(bitplane, 0, BPL_BYTES);
    
    make_copper_list(bitplane);
@@ -102,4 +102,3 @@ void platform_init_display(void) {
 
    display_get_framebuffer(&display_fb);
 }
-
