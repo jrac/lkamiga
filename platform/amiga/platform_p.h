@@ -80,6 +80,76 @@
 #define COLOR00 0x180
 #define COLOR01 0x182
 
+/*
+ * Interrupts are defined here with 1-based indexing, for simplicity/readability.
+ *
+ * We treat/define CIA interrupt numbers like a continuation of Paula's.
+ * 
+ */
+enum {
+   // Paula
+   INTERRUPT_TBE = 1,
+   INTERRUPT_DSKBLK,
+   INTERRUPT_SOFTINT,
+   INTERRUPT_PORTS,
+   INTERRUPT_COPER,
+   INTERRUPT_VERTB,
+   INTERRUPT_BLIT,
+   INTERRUPT_AUD2, 
+   INTERRUPT_AUD0, 
+   INTERRUPT_AUD3, 
+   INTERRUPT_AUD1, 
+   INTERRUPT_RBF, 
+   INTERRUPT_DSKSYN,
+   INTERRUPT_EXTER,
+
+   // CIA A
+   INTERRUPT_TIMERA_A,
+   INTERRUPT_TIMERB_A,
+   INTERRUPT_TOD_A,
+   INTERRUPT_SERP_A,
+   INTERRUPT_FLAG_A,
+
+   // CIA B
+   INTERRUPT_TIMERA_B,
+   INTERRUPT_TIMERB_B,
+   INTERRUPT_TOD_B,
+   INTERRUPT_SERP_B,
+   INTERRUPT_FLAG_B,
+};
+
+// Used for dealing with Amiga interrupt multiplexing
+static const uint16_t irq_level_map[] = {
+    0x0007, // CPU level 1
+    0x300C, // CPU level 2
+    0x0070, // CPU level 3
+    0x0780, // CPU level 4
+    0x1800, // CPU level 5
+    0x2000, // CPU level 6
+};
+
+// Paula interrupt register offsets
+enum {
+    INTREQ = 0x9c,
+    INTENA = 0x9a,
+    INTREQR = 0x1e,
+    INTENAR = 0x1c,
+};
+
+// Fourteen chipset-level interrupts from Paula, and five per CIA
+enum {
+    NUM_IRQS_TOTAL = 24,
+    NUM_IRQS_PAULA = 14,
+    NUM_IRQS_CIA = 5,
+};
+
+// Interrupts originating from each CIA are multiplexed/nested within CPU &
+// chipset-level IRQs. These values correspond to Paula's interrupt bits.
+enum {
+    CIA_A_MUX_LEVEL = 3,  // 'PORTS' IRQ, CIA-A and INT2
+    CIA_B_MUX_LEVEL = 13, // 'EXTER' IRQ, CIA-B and INT6
+};
+
 void cia_timer_init(void);
 void platform_serial_init(void);
 void platform_keyboard_init(cbuf_t *buffer);

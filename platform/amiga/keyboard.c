@@ -150,7 +150,7 @@ void platform_keyboard_init(cbuf_t *buffer) {
     cia_base[CIA_A_CRA] &= ~(1 << 6);        // Set SPMODE to input
     cia_base[CIA_A_ICR] = (1 << 7 | 1 << 3); // Set SP bit in ICR
 
-    register_int_handler(18, cia_kbd_interrupt, NULL);
-    unmask_interrupt(4);
-    unmask_interrupt(18);
+    register_int_handler(INTERRUPT_SERP_A, cia_kbd_interrupt, NULL);
+    unmask_interrupt(INTERRUPT_PORTS);
+    unmask_interrupt(INTERRUPT_SERP_A);
 }

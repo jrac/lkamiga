@@ -9,7 +9,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 ARCH := m68k
-M68K_CPU := 68020
+M68K_CPU := 68010
 
 #GLOBAL_COMPILEFLAGS += -mtune=68060
 
@@ -37,6 +37,7 @@ MODULE_SRCS += $(LOCAL_DIR)/stage2.S
 #override LINKER_SCRIPT := $(LOCAL_DIR)/map.ld
 
 # RAM layout
+# TODO: Move this to target(s)?
 MEMBASE ?= 0x3e800
 MEMSIZE ?= 0x7d000
 

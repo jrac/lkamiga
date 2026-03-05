@@ -52,7 +52,7 @@ static uint16_t read_reg(unsigned int reg) {
 
 // ACK and wake thread/event
 static enum handler_return uart_irq_tx_handler(void *arg) {
-    clear_interrupt(1);
+    clear_interrupt(INTERRUPT_TBE);
     event_signal(&tx_ev, false);
     return INT_NO_RESCHEDULE;
 }
@@ -61,7 +61,7 @@ static enum handler_return uart_irq_rx_handler(void *arg) {
     bool resched = false;
 
     uint16_t reg = read_reg(SERDATR);
-    clear_interrupt(12);
+    clear_interrupt(INTERRUPT_RBF);
 
     if ((reg & RBF_STATUS) > 0) {
         char c = reg & 0xFF;
@@ -83,9 +83,9 @@ void platform_serial_init(void) {
     cbuf_initialize(&tx_buf, 256);
     cbuf_initialize_etc(&rx_buf, RXBUF_SIZE, rx_buf_data);
 
-    register_int_handler(1, uart_irq_tx_handler, NULL);
-    register_int_handler(12, uart_irq_rx_handler, NULL);
-    unmask_interrupt(12);
+    register_int_handler(INTERRUPT_TBE, uart_irq_tx_handler, NULL);
+    register_int_handler(INTERRUPT_RBF, uart_irq_rx_handler, NULL);
+    unmask_interrupt(INTERRUPT_RBF);
 
     event_init(&tx_ev, false, EVENT_FLAG_AUTOUNSIGNAL);
 }
@@ -102,7 +102,7 @@ static int uart_write_thread(void *arg) {
             if (cbuf_read_char(&tx_buf, &c, false) != 1) {
                 tx_kick_pending = false;
                 tx_active = false;
-                mask_interrupt(1); // Prevent TBE storm
+                mask_interrupt(INTERRUPT_TBE); // Prevent TBE storm
                 spin_unlock(&tx_lock);
                 break;
             }
@@ -116,7 +116,7 @@ static int uart_write_thread(void *arg) {
             write_reg(SERDAT, c | 0x200);
 
             // Keep interrupt enabled while there's data
-            unmask_interrupt(1);
+            unmask_interrupt(INTERRUPT_TBE);
         }
     }
 
@@ -159,7 +159,7 @@ void uart_putc(char c) {
 
         // Queue should be empty now...
         tx_active = false;
-        mask_interrupt(1);
+        mask_interrupt(INTERRUPT_TBE);
 
         spin_unlock(&tx_lock);
 
@@ -172,7 +172,7 @@ void uart_putc(char c) {
     // Arm TX and wake writer thread
     if (!tx_active) {
         tx_active = true;
-        unmask_interrupt(1);
+        unmask_interrupt(INTERRUPT_TBE);
         event_signal(&tx_ev, false);
     }
 

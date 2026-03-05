@@ -31,28 +31,6 @@
 
 static volatile uint16_t *const paula_base = (void *)0xDFF000;
 
-// Paula interrupt register offsets
-enum {
-    INTREQ = 0x9c,
-    INTENA = 0x9a,
-    INTREQR = 0x1e,
-    INTENAR = 0x1c,
-};
-
-// Fourteen chipset-level interrupts from Paula, and five per CIA
-enum {
-    NUM_IRQS_TOTAL = 24,
-    NUM_IRQS_PAULA = 14,
-    NUM_IRQS_CIA = 5,
-};
-
-// Interrupts originating from each CIA are multiplexed/nested within CPU &
-// chipset-level IRQs. These values correspond to Paula's interrupt bits.
-enum {
-    CIA_A_MUX_LEVEL = 3,  // 'PORTS' IRQ, CIA-A and INT2
-    CIA_B_MUX_LEVEL = 13, // 'EXTER' IRQ, CIA-B and INT6
-};
-
 // IRQ handler array
 static struct int_handlers {
     int_handler handler;
@@ -60,16 +38,6 @@ static struct int_handlers {
 } handlers[NUM_IRQS_TOTAL];
 
 static uint8_t cia_a_irqs_enabled, cia_b_irqs_enabled;
-
-// Used for dealing with Amiga interrupt multiplexing
-static const uint16_t irq_level_map[] = {
-    0x0007, // CPU level 1
-    0x300C, // CPU level 2
-    0x0070, // CPU level 3
-    0x0780, // CPU level 4
-    0x1800, // CPU level 5
-    0x2000, // CPU level 6
-};
 
 static inline bool is_paula_irq(unsigned irq) {
     return irq >= 1 && irq <= NUM_IRQS_PAULA;
@@ -265,7 +233,7 @@ void platform_early_init(void) {
     write_reg(INTENA, 0xC000);
 
     // Enable Paula 'EXTER' interrupts, needed for CIA-B timers
-    unmask_interrupt(14);
+    unmask_interrupt(INTERRUPT_EXTER);
 
     novm_add_arena("mem", MEMBASE, MEMSIZE);
     platform_init_display();

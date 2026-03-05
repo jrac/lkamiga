@@ -126,7 +126,7 @@ lk_time_t current_time(void) {
 
 void platform_stop_timer(void) {
     write_reg(CIA_B_CRB, 0x00);
-    mask_interrupt(21);
+    mask_interrupt(INTERRUPT_TIMERB_B);
 }
 
 static inline uint16_t ms_to_ticks(lk_time_t ms) {
@@ -154,7 +154,7 @@ static enum handler_return cia_timer_irq(void *arg) {
 void cia_timer_init(void) {
     eclock_hz = calculate_eclock();
 
-    mask_interrupt(20);
+    mask_interrupt(INTERRUPT_TIMERA_B);
 
     // Continuous, free-running mode for Timer A
     write_reg(CIA_B_TALO, 0xFF);
@@ -166,7 +166,7 @@ void cia_timer_init(void) {
 
     platform_stop_timer();
 
-    register_int_handler(21, cia_timer_irq, NULL);
+    register_int_handler(INTERRUPT_TIMERB_B, cia_timer_irq, NULL);
 }
 
 // TODO: Can some of oneshot and periodic's stuff be centralised and called by
@@ -187,7 +187,7 @@ status_t platform_set_oneshot_timer(platform_timer_callback callback, void *arg,
     // Enable Timer B CIA interrupt
     write_reg(CIA_B_ICR, 0x80 | 0x02);
 
-    unmask_interrupt(21);
+    unmask_interrupt(INTERRUPT_TIMERB_B);
 
     // Start Timer B in one-shot mode. START | RUNMODE | LOAD
     write_reg(CIA_B_CRB, (0 << 5) | (1 << 4) | (1 << 3) | (1 << 0));
