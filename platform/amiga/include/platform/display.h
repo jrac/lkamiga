@@ -10,7 +10,8 @@
 
 enum { W = 320,
        H = 256,
-       BYTES_PER_ROW = (W / 8),
+       // Round up width to next multiple. bitplane DMA is word-aligned (16 pixels).
+       BYTES_PER_ROW = (((W + 15) & ~15) / 8),
        BPL_BYTES = (BYTES_PER_ROW * H) };
 
 void make_copper_list(uint8_t *bpl);

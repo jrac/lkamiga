@@ -106,7 +106,7 @@ loader:
 
    /* Allocate memory for kernel image */
    move.l %d2,%d0
-   move.l #(MEMF_CLEAR),%d1 /* AllocMem attribute mask: MEMF_CLEAR | MEMF_CHIP */
+   move.l #(MEMF_REVERSE + MEMF_CLEAR),%d1
    jsr -198(%a6) /* AllocMem() */
    tst.l %d0
    beq alloc_failure

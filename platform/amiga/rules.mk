@@ -38,8 +38,8 @@ MODULE_SRCS += $(LOCAL_DIR)/stage2.S
 
 # RAM layout
 # TODO: Move this to target(s)?
-MEMBASE ?= 0x3e800
-MEMSIZE ?= 0x7d000
+MEMBASE ?= 0x400
+MEMSIZE ?= 0x7c800 # Target 512KB chip ram for now, reserve a bit for future use
 
 # Optional useful defines
 GLOBAL_DEFINES += PLATFORM_SUPPORTS_PANIC_SHELL=1

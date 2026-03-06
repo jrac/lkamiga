@@ -33,7 +33,7 @@ static volatile uint16_t *const paula_base = (void *)0xDFF000;
 
 static struct display_framebuffer display_fb;
 
-static uint8_t *bitplane;
+static uint8_t bitplane[BPL_BYTES];
 static uint16_t copper[64];
 
 void make_copper_list(uint8_t *bpl) {
@@ -99,7 +99,6 @@ status_t display_get_info(struct display_info *info) {
 }
 
 void platform_init_display(void) {
-    bitplane = (uint8_t *)novm_alloc_pages(3, 'mem'); // TODO: remove hardcoding
     memset(bitplane, 0, BPL_BYTES);
 
     make_copper_list(bitplane);
