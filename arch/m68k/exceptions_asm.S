@@ -45,8 +45,6 @@ _m68k_irq_vector:
 exception_vector _m68k_general_exception m68k_exception
 exception_vector _m68k_trap_exception m68k_trap_exception
 
-.extern isp_unimp
-
 .section .text.vectab
 .align 16
 DATA(exc_vectors)
