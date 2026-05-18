@@ -49,8 +49,6 @@ ksize:
 
 lea STACK_TOP,%sp
 
-move.w  #0x041E,0x00DFF180    /* Flash a colour on screen for debugging */
-
 lea     loader(%pc),%a5
 move.l  %a5,0x00000080        /* Trap handler */
 
@@ -113,7 +111,7 @@ loader:
    /* Restore IOReq pointer before next DoIO call */
    lea ioreq_ptr,%a1
    move.l (%a1),%a1
-   
+
    /* Load kernel from floppy in to RAM */
    move.l  %d2,io_Length(%a1)   /* TODO: Write kernel size somewhere during build, read that value */
    move.l  %a2,io_Data(%a1) /* Read kernel from floppy in to memory provided by AllocMem */

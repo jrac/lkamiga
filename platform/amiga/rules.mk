@@ -32,7 +32,6 @@ MODULE_SRCS += $(LOCAL_DIR)/stage1.S
 MODULE_SRCS += $(LOCAL_DIR)/stage2.S
 
 # RAM layout
-# TODO: Move this to target(s)?
 MEMBASE ?= 0x400
 MEMSIZE ?= 0x7c800 # Target 512KB chip ram for now
 
