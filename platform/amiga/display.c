@@ -19,56 +19,52 @@
 #include <kernel/novm.h>
 #endif
 
-static inline uint16_t COP_MOVE(uint16_t reg_off) {
-    return (0x0000 + reg_off);
-}
-static inline uint16_t COP_WAIT(uint16_t vhp) {
-    return (0x8000 | (vhp & 0x7FFE));
-}
-static inline uint16_t COP_END(void) {
-    return 0xFFFF;
-}
-
 static volatile uint16_t *const paula_base = (void *)0xDFF000;
-
 static struct display_framebuffer display_fb;
 
+// 1bpp bitplane
 static uint8_t bitplane[BPL_BYTES];
 static uint16_t copper[64];
 
 void make_copper_list(uint8_t *bpl) {
-    uintptr_t p = (uintptr_t)bpl;
-    uint16_t pth = (p >> 16);
-    uint16_t ptl = (p & 0xFFFF);
+    // Bitplane ptr register is two 16bit halves. May need to change this if vm/MMU is ever enabled.
+    uintptr_t bpl_ptr = (uintptr_t)bpl;
+    uint16_t bplptr_hi = (bpl_ptr >> 16);
+    uint16_t bplptr_lo = (bpl_ptr & 0xFFFF);
 
     int i = 0;
 
     // clang-format off
-    // Set display window
-    copper[i++] = COP_MOVE(DIWSTRT); copper[i++] = 0x2C81; // DIWSTRT
-    copper[i++] = COP_MOVE(DIWSTOP); copper[i++] = ((((0x2C + H) & 0xFF) << 8) | 0xC1); // DIWSTOP
-    copper[i++] = COP_MOVE(DDFSTRT); copper[i++] = 0x0038; // DDFSTRT
-    copper[i++] = COP_MOVE(DDFSTOP); copper[i++] = 0x00D0; // DDFSTOP
+   
+   // Copper instructions are two words. First word is the destination register offset, second is the value.
+   
+   // Set display window
+   copper[i++] = DIWSTRT; copper[i++] = 0x2C81; // Display window vert + horiz start, PAL low-res mode
+   copper[i++] = DIWSTOP; copper[i++] = ((((0x2C + H) & 0xFF) << 8) | 0xC1);  // vert + horiz end
+   copper[i++] = DDFSTRT; copper[i++] = 0x0038; // low-res DMA fetch start
+   copper[i++] = DDFSTOP; copper[i++] = 0x00D0; // DMA fetch stop. Stop and start may need to change if screen width ever does.
 
-    // 1 bitplane, enable color (0x0200)
-    copper[i++] = COP_MOVE(BPLCON0); copper[i++] = (0x0200 | (1 << 12));
-    copper[i++] = COP_MOVE(BPLCON1); copper[i++] = 0x0000;
-    copper[i++] = COP_MOVE(BPLCON2); copper[i++] = 0x0000;
+   // 1 bitplane, enable "colour" output
+   copper[i++] = BPLCON0; copper[i++] = (0x200 | (1 << 12)); // Set display mode and bitplane count ("BPU"); one bitplane
+   copper[i++] = BPLCON1; copper[i++] = 0x0000; // No horizontal playfield scroll
+   copper[i++] = BPLCON2; copper[i++] = 0x0000; // Set playfield priority
 
-    // Bitplane modulo = 0 for a single linear bitplane 
-    copper[i++] = COP_MOVE(BPL1MOD); copper[i++] = 0x0000;
-    copper[i++] = COP_MOVE(BPL2MOD); copper[i++] = 0x0000;
+   // Bitplane modulo = 0 for a single linear bitplane 
+   copper[i++] = BPL1MOD; copper[i++] = 0x0000;
+   copper[i++] = BPL2MOD; copper[i++] = 0x0000;
 
-    // Bitplane pointer
-    copper[i++] = COP_MOVE(BPL1PTH); copper[i++] = pth;
-    copper[i++] = COP_MOVE(BPL1PTL); copper[i++] = ptl;
+   // Set bitplane pointer
+   copper[i++] = BPL1PTH; copper[i++] = bplptr_hi;
+   copper[i++] = BPL1PTL; copper[i++] = bplptr_lo;
 
-    // Background and foreground colours
-    copper[i++] = COP_MOVE(COLOR00); copper[i++] = 0x0000;
-    copper[i++] = COP_MOVE(COLOR01); copper[i++] = 0x0FFF;
+   // Background and foreground colours
+   copper[i++] = COLOR00; copper[i++] = 0x0000;
+   copper[i++] = COLOR01; copper[i++] = 0x0FFF;
 
-    copper[i++] = COP_END();
-    copper[i++] = COP_END();
+   // Send end/terminator words, causes Copper to stop processing the list
+   copper[i++] = 0xFFFF;
+   copper[i++] = 0xFFFE;
+
     // clang-format on
 }
 
@@ -106,13 +102,15 @@ void platform_init_display(void) {
     // Disable DMA
     write_reg(DMACON, 0x7FFF);
 
-    // Set up copper list
+    // Set up copper list address, high and low.
+    // Physical address, might need revisiting if/when vm/MMU
     uintptr_t clist = (uintptr_t)copper;
     write_reg(COP1LCH, (clist >> 16));
     write_reg(COP1LCL, (clist & 0xFFFF));
     write_reg(COPJMP1, 0x0000);
 
-    // Enable DMA
+    // Enable DMA.
+    // 0x200 = master DMA enable, 0x100 = bitplane DMA enable, 0x0080 = Copper DMA enable
     write_reg(DMACON, (0x8000 | 0x0200 | 0x0080 | 0x0100));
 
     display_get_framebuffer(&display_fb);
