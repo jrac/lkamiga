@@ -33,6 +33,14 @@ ksize:
 .equ    MEMF_LARGEST,   0x00020000
 .equ    MEMF_REVERSE,   0x00040000
 
+.equ _LVOAllocAbs,      -204
+.equ _LVOAllocMem,      -198
+.equ _LVOAvailMem,      -216
+.equ _LVOCacheClearU,   -636
+.equ _LVOWaitIO,        -318
+.equ _LVOCheckIO,       -468
+.equ _LVODoIO,          -456
+
 /* IORequest stuff */
 .equ    CMD_READ,   2
 .equ    io_Unit,    24
@@ -65,16 +73,22 @@ loader:
    /* Reserve memory for stack */
    move.l #STACK_SIZE,%d0
    move.l #(MEMF_CLEAR + MEMF_REVERSE + MEMF_CHIP),%d1
-   jsr -198(%a6) /* AllocMem() */
+   jsr _LVOAllocMem(%a6)
    tst.l %d0
-   beq alloc_failure
+   beq failure
+
+   move.l #STACK_SIZE,%d0
+   move.l #STACK_BASE,%a1
+   jsr _LVOAllocAbs(%a6)
+   tst.l %d0
+   beq failure
 
    /* Reserve memory and load header */
    move.l #1024,%d0
-   move.l #(MEMF_CLEAR + MEMF_PUBLIC),%d1
-   jsr -198(%a6) /* AllocMem() */
+   move.l #(MEMF_CLEAR + MEMF_PUBLIC + MEMF_CHIP),%d1
+   jsr _LVOAllocMem(%a6)
    tst.l %d0
-   beq alloc_failure
+   beq failure
    lea hdr_ptr,%a5
    move.l %d0,(%a5)
    move.l %d0,%a3
@@ -83,12 +97,16 @@ loader:
    lea ioreq_ptr,%a1
    move.l (%a1),%a1
 
+   bsr wait_ioreq_idle
+
    /* Retrieve kernel image size from header in ADF */
    move.l  #(2*512),io_Length(%a1)
    move.l  %a3,io_Data(%a1) /* Read header from floppy in to memory provided by AllocMem */
    move.l  #0x400,io_Offset(%a1)
    move.w  #CMD_READ,io_Command(%a1)
-   jsr     -456(%a6) /* DoIO() */
+   jsr     _LVODoIO(%a6)
+   tst.b io_Error(%a1)
+   bne failure
    lea ksize(%pc),%a4
    move.l (%a3),(%a4)
 
@@ -100,10 +118,10 @@ loader:
 
    /* Allocate memory for kernel image */
    move.l %d2,%d0
-   move.l #(MEMF_REVERSE + MEMF_CLEAR),%d1
-   jsr -198(%a6) /* AllocMem() */
+   move.l #(MEMF_REVERSE + MEMF_CLEAR + MEMF_CHIP),%d1
+   jsr _LVOAllocMem(%a6)
    tst.l %d0
-   beq alloc_failure
+   beq failure
    lea kaddr_ptr,%a0
    move.l %d0,(%a0)
    move.l %d0,%a2
@@ -112,23 +130,32 @@ loader:
    lea ioreq_ptr,%a1
    move.l (%a1),%a1
 
+   bsr wait_ioreq_idle
+
    /* Load kernel from floppy in to RAM */
    move.l  %d2,io_Length(%a1)   /* TODO: Write kernel size somewhere during build, read that value */
    move.l  %a2,io_Data(%a1) /* Read kernel from floppy in to memory provided by AllocMem */
    move.l  #0x800,io_Offset(%a1)
    move.w  #CMD_READ,io_Command(%a1)
-   jsr     -456(%a6) /* DoIO() */
-   move.w  #9,io_Command(%a1)          /* td_motor */
-   clr.l   io_Length(%a1)              /* Turn off FDD motor */
-   jsr     -456(%a6)
+   jsr     _LVODoIO(%a6)
+   tst.b io_Error(%a1)
+   bne failure
+
+   bsr wait_ioreq_idle
+
+   move.w  #9,io_Command(%a1)    /* td_motor */
+   clr.l   io_Length(%a1)        /* Turn off FDD motor */
+   jsr     _LVODoIO(%a6)
+   tst.b io_Error(%a1)
+   bne failure
 
    lea kaddr_ptr,%a0
    move.l (%a0),%a2
-   jsr     -0x27c(%a6)
+   jsr   _LVOCacheClearU(%a6)
 
    /* Detect available chip RAM, pass to kernel via stack */
    move.l #(MEMF_CHIP + MEMF_TOTAL),%d1
-   jsr   -216(%a6)
+   jsr   _LVOAvailMem(%a6)
    move.l %d0,-(%sp)
 
    /* Jump to kernel. Kickstart will perform cleanup, etc. */
@@ -136,9 +163,20 @@ loader:
    move.l %a2,%a0
    jsr (%a0)
 
-alloc_failure:
+failure:
    | TODO: Throw a useful error, more graceful failure
    move.w  #0xFF00,0x00DFF180    /* Flash a colour on screen for debugging */
    moveq #0xfffffff0,%d0
    rts
 
+wait_ioreq_idle:
+   move.l %a1,-(%sp)
+   jsr   _LVOCheckIO(%a6)
+   move.l (%sp),%a1
+   tst.l %d0
+   bne.s .done
+
+   jsr   _LVOWaitIO(%a6)
+.done:
+   move.l (%sp)+,%a1
+   rts
