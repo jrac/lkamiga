@@ -11,14 +11,14 @@
 #include <lib/cbuf.h>
 #include <lk/reg.h>
 #include <platform.h>
-#include <platform/console.h>
 #include <platform/debug.h>
 #include <platform/interrupts.h>
 #include <platform/keyboard.h>
 #include <platform/pc.h>
+#include <platform/vga_console.h>
 #include <stdarg.h>
 
-#include <platform/display.h>
+#include <platform/fb_console.h>
 
 #include "platform_p.h"
 
@@ -30,10 +30,12 @@
 #endif
 
 static const int uart_baud_rate = DEBUG_BAUD_RATE;
-static const int uart_io_port = (DEBUG_COM_PORT == 1) ? COM1_REG : (DEBUG_COM_PORT == 2) ? COM2_REG
-                                                               : (DEBUG_COM_PORT == 3)   ? COM3_REG
-                                                                                         : COM4_REG;
-static const int uart_irq = (DEBUG_COM_PORT == 1 || DEBUG_COM_PORT == 3) ? INT_COM1_COM3 : INT_COM2_COM4;
+static const int uart_io_port = (DEBUG_COM_PORT == 1)   ? COM1_REG
+                                : (DEBUG_COM_PORT == 2) ? COM2_REG
+                                : (DEBUG_COM_PORT == 3) ? COM3_REG
+                                                        : COM4_REG;
+static const int uart_irq =
+    (DEBUG_COM_PORT == 1 || DEBUG_COM_PORT == 3) ? INT_COM1_COM3 : INT_COM2_COM4;
 
 cbuf_t console_input_buf;
 
@@ -90,10 +92,10 @@ void platform_dputc(char c) {
         platform_dputc('\r');
     }
 
-    if (has_display()) {
-        dputc(c);
+    if (fb_console_present()) {
+        fb_console_dputc(c);
     } else {
-        cputc(c);
+        vga_console_putc(c);
     }
     debug_uart_putc(c);
 }

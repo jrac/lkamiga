@@ -78,13 +78,14 @@ void platform_early_init(void) {
     if (!ptr) {
         panic("68K VIRT: unable to find MEMCHUNK BOOTINFO record\n");
     }
-    if (size < 8) {
+    if (size < sizeof(struct bootinfo_item_memchunk)) {
         panic("68K VIRT: MEMCHUNK BOOTINFO record too small\n");
     }
     LTRACEF("MEMCHUNK ptr %p, size %hu\n", ptr, size);
 
-    uint32_t membase = *(const uint32_t *)ptr;
-    uint32_t memsize = *(const uint32_t *)((uintptr_t)ptr + 4);
+    const struct bootinfo_item_memchunk *memchunk = (const struct bootinfo_item_memchunk *)ptr;
+    uint32_t membase = memchunk->base;
+    uint32_t memsize = memchunk->size;
 
     dprintf(INFO, "VIRT: memory base %#x size %#x\n", membase, memsize);
     add_memory_region((paddr_t)membase, (size_t)memsize, 0);
@@ -103,12 +104,34 @@ void platform_init(void) {
 #endif
 
     /* detect any virtio devices */
-    uint virtio_irqs[NUM_VIRT_VIRTIO];
-    for (int i = 0; i < NUM_VIRT_VIRTIO; i++) {
-        virtio_irqs[i] = VIRT_VIRTIO_IRQ_BASE + i;
+    const struct bootinfo_item_device *virtio_dev = NULL;
+    uint16_t virtio_record_size;
+    const void *virtio_ptr = bootinfo_find_record(BOOTINFO_TAG_VIRT_VIRTIO_BASE, &virtio_record_size);
+    if (virtio_ptr && virtio_record_size >= sizeof(struct bootinfo_item_device)) {
+        virtio_dev = (const struct bootinfo_item_device *)virtio_ptr;
     }
 
-    virtio_mmio_detect((void *)VIRT_VIRTIO_MMIO_BASE, NUM_VIRT_VIRTIO, virtio_irqs, 0x200);
+    uint32_t virtio_base = virtio_dev ? virtio_dev->base : VIRT_VIRTIO_MMIO_BASE;
+    uint32_t virtio_irq_base = VIRT_VIRTIO_IRQ_BASE;
+    if (virtio_dev) {
+        uint32_t raw_irq_base = virtio_dev->irq_base;
+
+        // QEMU bootinfo uses PIC_IRQ() numbering where PIC#1 starts at 8.
+        // LK's m68k PIC driver uses a 0-based linear vector per PIC bank.
+        if (raw_irq_base >= 8 && raw_irq_base < (8 + NUM_IRQS)) {
+            virtio_irq_base = raw_irq_base - 8;
+        } else if (raw_irq_base < NUM_IRQS) {
+            // Accept already-normalized values for compatibility.
+            virtio_irq_base = raw_irq_base;
+        }
+    }
+
+    uint virtio_irqs[NUM_VIRT_VIRTIO];
+    for (int i = 0; i < NUM_VIRT_VIRTIO; i++) {
+        virtio_irqs[i] = virtio_irq_base + i;
+    }
+
+    virtio_mmio_detect((void *)virtio_base, NUM_VIRT_VIRTIO, virtio_irqs, 0x200);
 
 #if WITH_LIB_MINIP
     if (virtio_net_found() > 0) {

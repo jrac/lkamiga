@@ -73,11 +73,22 @@ HANDLED_CORE := true
 ENABLE_THUMB := true
 SUBARCH := arm-m
 endif
+ifeq ($(ARM_CPU),cortex-m33)
+GLOBAL_DEFINES += \
+	ARM_CPU_CORTEX_M33=1 \
+	ARM_ISA_ARMv8=1 \
+	ARM_ISA_ARMv8M=1 \
+	ARM_WITH_THUMB=1 \
+	ARM_WITH_THUMB2=1
+HANDLED_CORE := true
+ENABLE_THUMB := true
+SUBARCH := arm-m
+endif
 ifeq ($(ARM_CPU),cortex-m55)
 GLOBAL_DEFINES += \
 	ARM_CPU_CORTEX_M55=1 \
-	ARM_ISA_ARMv7=1 \
-	ARM_ISA_ARMv7M=1 \
+	ARM_ISA_ARMv8=1 \
+	ARM_ISA_ARMv8M=1 \
 	ARM_WITH_THUMB=1 \
 	ARM_WITH_THUMB2=1 \
 	ARM_WITH_CACHE=1 \
@@ -266,7 +277,7 @@ MODULE_FLOAT_SRCS += \
 MODULE_ARM_OVERRIDE_SRCS := \
 	$(LOCAL_DIR)/arm/arch.c
 
-ARCH_OPTFLAGS := -O2
+ARCH_OPTFLAGS ?= -O2
 WITH_LINKER_GC ?= 1
 
 # use the numeric registers when disassembling code
@@ -333,7 +344,7 @@ GLOBAL_DEFINES += \
 MODULE_DEPS += \
 	arch/arm/arm-m/CMSIS
 
-ARCH_OPTFLAGS := -Os
+ARCH_OPTFLAGS ?= -Os
 WITH_LINKER_GC ?= 1
 endif
 
