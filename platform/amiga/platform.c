@@ -234,7 +234,10 @@ void platform_early_init(void) {
     // Enable Paula 'EXTER' interrupts, needed for CIA-B timers
     unmask_interrupt(INTERRUPT_EXTER);
 
-    novm_add_arena("mem", MEMBASE, MEMSIZE);
+    // Chip mem size is passed in by the bootloader. novm automatically 
+    // moves an arena to avoid overlapping with the kernel itself.
+    novm_add_arena("mem", MEMBASE, lk_boot_args[0]);
+
     platform_init_display();
     platform_serial_init();
     cia_timer_init();

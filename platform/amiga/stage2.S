@@ -23,6 +23,8 @@ ksize:
 .equ    MEMF_CHIP,      0x00000002
 .equ    MEMF_FAST,      0x00000004
 
+.equ    MEMF_TOTAL,     0x00080000
+
 .equ    MEMF_LOCAL,     0x00000100
 .equ    MEMF_24BITDMA,  0x00000200
 .equ    MEMF_KICK,      0x00000400
@@ -61,17 +63,11 @@ loader:
    /* Stash IORequest address, passed in from Kickstart */
    lea ioreq_ptr,%a5
    move.l %a1,(%a5)
-
+   
    /* Reserve memory for stack */
    move.l #STACK_SIZE,%d0
-   move.l #(MEMF_CLEAR + MEMF_REVERSE),%d1 /* AllocMem attribute mask: MEMF_CLEAR | MEMF_CHIP */
+   move.l #(MEMF_CLEAR + MEMF_REVERSE + MEMF_CHIP),%d1
    jsr -198(%a6) /* AllocMem() */
-   tst.l %d0
-   beq alloc_failure
-
-   move.l #STACK_SIZE,%d0
-   move.l #STACK_BASE,%a1
-   jsr -204(%a6) | AllocAbs()
    tst.l %d0
    beq alloc_failure
 
@@ -117,7 +113,7 @@ loader:
    /* Restore IOReq pointer before next DoIO call */
    lea ioreq_ptr,%a1
    move.l (%a1),%a1
-
+   
    /* Load kernel from floppy in to RAM */
    move.l  %d2,io_Length(%a1)   /* TODO: Write kernel size somewhere during build, read that value */
    move.l  %a2,io_Data(%a1) /* Read kernel from floppy in to memory provided by AllocMem */
@@ -131,6 +127,11 @@ loader:
    lea kaddr_ptr,%a0
    move.l (%a0),%a2
    jsr     -0x27c(%a6)
+
+   /* Detect available chip RAM, pass to kernel via stack */
+   move.l #(MEMF_CHIP + MEMF_TOTAL),%d1
+   jsr   -216(%a6)
+   move.l %d0,-(%sp)
 
    /* Jump to kernel. Kickstart will perform cleanup, etc. */
    move.l #0,%d0
