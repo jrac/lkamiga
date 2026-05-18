@@ -33,6 +33,7 @@ ksize:
 .equ    MEMF_LARGEST,   0x00020000
 .equ    MEMF_REVERSE,   0x00040000
 
+/* Kickstart Exec library routine offsets */
 .equ _LVOAllocAbs,      -204
 .equ _LVOAllocMem,      -198
 .equ _LVOAvailMem,      -216
