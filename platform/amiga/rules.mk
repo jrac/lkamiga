@@ -9,8 +9,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 ARCH := m68k
-# <= 010 does also work
-M68K_CPU := 68020
+# NOTE: All chip models are supported, but 060 needs explicit targeting
+M68K_CPU := 68000
 
 LK_HEAP_IMPLEMENTATION ?= dlmalloc
 
