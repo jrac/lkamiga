@@ -211,7 +211,6 @@ enum handler_return m68k_platform_irq(uint8_t m68k_irq) {
         combined &= ~(1 << irq_bit); // Clear IRQ bit
 
         if (handlers[irq_bit].handler) {
-            // TODO: Convert irq bit to human-readable IRQ name (enum)
             ret = handlers[irq_bit].handler(handlers[irq_bit].arg);
         }
     }
@@ -224,8 +223,8 @@ enum handler_return m68k_platform_irq(uint8_t m68k_irq) {
 }
 
 void platform_early_init(void) {
-    // Start with a clean interrupt slate, we'll selectively enable/unmask as
-    // needed. Disable and clear all Paula interrupts initially
+    // Start with a clean interrupt slate, we'll selectively enable/unmask as needed. 
+    // Disable and clear all Paula interrupts initially.
     write_reg(INTENA, 0x7FFF);
     write_reg(INTREQ, 0x7FFF);
 

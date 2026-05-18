@@ -9,9 +9,8 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 ARCH := m68k
-M68K_CPU := 68010
-
-#GLOBAL_COMPILEFLAGS += -mtune=68060
+# <= 010 does also work
+M68K_CPU := 68020
 
 LK_HEAP_IMPLEMENTATION ?= dlmalloc
 
@@ -32,23 +31,17 @@ MODULE_SRCS += $(LOCAL_DIR)/power.c
 MODULE_SRCS += $(LOCAL_DIR)/stage1.S
 MODULE_SRCS += $(LOCAL_DIR)/stage2.S
 
-# Optional: custom linker script
-# Comment out if not using one yet
-#override LINKER_SCRIPT := $(LOCAL_DIR)/map.ld
-
 # RAM layout
 # TODO: Move this to target(s)?
 MEMBASE ?= 0x400
-MEMSIZE ?= 0x7c800 # Target 512KB chip ram for now, reserve a bit for future use
+MEMSIZE ?= 0x7c800 # Target 512KB chip ram for now
 
 # Optional useful defines
 GLOBAL_DEFINES += PLATFORM_SUPPORTS_PANIC_SHELL=1
 GLOBAL_DEFINES += PLATFORM_HAS_DYNAMIC_TIMER=1  # unless you add a real timer
 GLOBAL_DEFINES += NOVM_DEFAULT_ARENA=0
-#GLOBAL_DEFINES += NOVM_MAX_ARENAS=2
 GLOBAL_DEFINES += ARCH_DO_RELOCATION=1
 GLOBAL_DEFINES += CONSOLE_HAS_INPUT_BUFFER=1
-#GLOBAL_DEFINES += CONSOLE_OUTPUT_TO_PLATFORM_PUTC=1
 
 STAGE1_ELF := $(BUILDDIR)/platform/amiga/stage1.S.o
 STAGE1_RAW := $(BUILDDIR)/platform/amiga/stage1.raw

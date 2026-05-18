@@ -18,12 +18,12 @@ static void amiga_reboot(void) {
 }
 
 static void amiga_shutdown(void) {
-   // Might be able to get away with just the 'stop'
-   paula_base[0x9c >> 1] = 0x7fff; // INTREQ
-   paula_base[0x9a >> 1] = 0x7fff; // INTENA
-   paula_base[0x96 >> 1] = 0x7fff; // DMACON
+    // Might be able to get away with just the 'stop'
+    paula_base[0x9c >> 1] = 0x7fff; // INTREQ
+    paula_base[0x9a >> 1] = 0x7fff; // INTENA
+    paula_base[0x96 >> 1] = 0x7fff; // DMACON
 
-   __asm__ volatile("stop #0x2700");
+    __asm__ volatile("stop #0x2700");
 }
 
 void platform_halt(platform_halt_action suggested_action, platform_halt_reason reason) {
