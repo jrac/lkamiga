@@ -65,19 +65,13 @@ move.l  %a5,0x00000080        /* Trap handler */
 trap    #0 
 
 loader:
+   lea STACK_TOP,%sp
    movea.l 0x00000004.w,%a6            /* Exec base */
 
    /* Stash IORequest address, passed in from Kickstart */
    lea ioreq_ptr,%a5
    move.l %a1,(%a5)
    
-   /* Reserve memory for stack */
-   move.l #STACK_SIZE,%d0
-   move.l #(MEMF_CLEAR + MEMF_REVERSE + MEMF_CHIP),%d1
-   jsr _LVOAllocMem(%a6)
-   tst.l %d0
-   beq failure
-
    move.l #STACK_SIZE,%d0
    move.l #STACK_BASE,%a1
    jsr _LVOAllocAbs(%a6)
@@ -108,17 +102,16 @@ loader:
    jsr     _LVODoIO(%a6)
    tst.b io_Error(%a1)
    bne failure
-   lea ksize(%pc),%a4
-   move.l (%a3),(%a4)
 
    /* Determine how much trackdisk should read, based on kernel size. Round to next 512 */
-   move.l (%a4),%d1
-   move.l %d1,%d2
+   lea ksize(%pc),%a4
+   move.l (%a3),%d2
    add.l #511,%d2
    and.l #0xFFFFFE00,%d2
+   move.l %d2,(%a4)
 
    /* Allocate memory for kernel image */
-   move.l %d2,%d0
+   move.l (%a4),%d0
    move.l #(MEMF_REVERSE + MEMF_CLEAR + MEMF_CHIP),%d1
    jsr _LVOAllocMem(%a6)
    tst.l %d0
@@ -134,7 +127,8 @@ loader:
    bsr wait_ioreq_idle
 
    /* Load kernel from floppy in to RAM */
-   move.l  %d2,io_Length(%a1)   /* TODO: Write kernel size somewhere during build, read that value */
+   lea ksize(%pc),%a4
+   move.l  (%a4),io_Length(%a1)
    move.l  %a2,io_Data(%a1) /* Read kernel from floppy in to memory provided by AllocMem */
    move.l  #0x800,io_Offset(%a1)
    move.w  #CMD_READ,io_Command(%a1)
@@ -157,6 +151,7 @@ loader:
    /* Detect available chip RAM, pass to kernel via stack */
    move.l #(MEMF_CHIP + MEMF_TOTAL),%d1
    jsr   _LVOAvailMem(%a6)
+
    move.l %d0,-(%sp)
 
    /* Jump to kernel. Kickstart will perform cleanup, etc. */
